@@ -1,0 +1,2 @@
+# AshEchoesGachaCount
+白荆回廊官方卡池记录查询数据统计
