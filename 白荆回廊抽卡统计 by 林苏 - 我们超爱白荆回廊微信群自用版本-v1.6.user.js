@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         白荆回廊抽卡统计 by 林苏 - 我们超爱白荆回廊微信群自用版本
 // @namespace    http://tampermonkey.net/
-// @version      v1.5
+// @version      v1.6
 // @description  我们超爱白荆回廊群自用版本，由天墉城海临办事处、流月城海临办事处、光明野海临办事处提供赞助！
 // @author       林苏
 // @match        https://seed.qq.com/act/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=qq.com
 // @grant        none
 // @require      https://code.jquery.com/jquery-3.7.1.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.40/jquery.csv.min.js
 // @sign         211c8fab707579bf
 // ==/UserScript==
 // changeLog
@@ -17,25 +18,26 @@
 //  v1.3 烙痕总抽数区分友情池
 //  v1.4 区分卡池抽数统计；增加不歪率统计；增加平均抽数统计
 //  v1.5 优化不歪率统计公式；增加小保底是否歪了显示；
+//  v1.6 适配烛龙配置文件的改动；
 
-let queryPoolConfigUrl = "https://seed.qq.com/act/a20240905record/pc/json/pool.json";
-let queryRoleConfigUrl = "https://seed.qq.com/act/a20240905record/pc/json/concordant.json";
-let queryCardConfigUrl = "https://seed.qq.com/act/a20240905record/pc/json/soldering_mark.json";
+let queryPoolConfigUrl = "https://seed.qq.com/act/a20240905record/pc/csv/kachi.csv";
+let queryRoleConfigUrl = "https://seed.qq.com/act/a20240905record/pc/csv/tdz.csv";
+let queryCardConfigUrl = "https://seed.qq.com/act/a20240905record/pc/csv/lh.csv";
 let queryDataUrl = "https://comm.ams.game.qq.com/ide/";
 
 let nickName = $('#nickName').text();
 let nowDate = getFormattedDate();
 let currentCookies = document.cookie;
 
-let poolInfo;
-let roleInfo;
-let cardInfo;
+let poolInfo = {};
+let roleInfo = {};
+let cardInfo = {};
 
 let poolUpConfig = '{"12":{"up":"602"},"14":{"up":"618"},"15":{"up":"626"},"17":{"up":"623"},"18":{"up":"622"},"20":{"up":"624"},"21":{"up":"610"},"24":{"up":"603"},"26":{"up":"630"},"28":{"up":"628"},"31":{"up":"631"},"33":{"up":"632"},"35":{"up":"611"},"37":{"up":"634"},"39":{"up":"633"}}';
 
 let poolUpInfo = JSON.parse(poolUpConfig);
 
-let specialFileds = "total,normalTotal,upTotal,specialTotal,sixTotal,fiveTotal,normalUsedNum,upUsedNum,upSixTotal,nowUpSixTotal,small,smallTotal,smallUpTotal";
+let specialFields = "total,normalTotal,upTotal,specialTotal,sixTotal,fiveTotal,normalUsedNum,upUsedNum,upSixTotal,nowUpSixTotal,small,smallTotal,smallUpTotal";
 
 (function () {
     queryConfig().then(() => {
@@ -70,7 +72,7 @@ function createRoleCountPage() {
         let poolHtml = '';
         Object.keys(rolePools)
               .forEach(key => {
-                  if (!specialFileds.includes(key)) {
+                  if (!specialFields.includes(key)) {
                       let sixRoles = rolePools[key].sixList;
                       let poolTbody = '';
                       sixRoles.forEach(sixRole => {
@@ -107,7 +109,7 @@ function createCardCountPage() {
 
         Object.keys(cardPools)
               .forEach(key => {
-                  if (!specialFileds.includes(key)) {
+                  if (!specialFields.includes(key)) {
                       //卡池列表内容
                       let poolTbody = '';
                       if (cardPools[key].name.includes("海域同游")) {
@@ -141,23 +143,75 @@ function createCardCountPage() {
 
 // 更新卡池配置、角色配置、烙痕配置
 async function queryConfig() {
-    await $.get(queryPoolConfigUrl, function (resp) {
-        console.log("----------------------------------------")
-        console.log(resp);
-        poolInfo = JSON.parse(resp);
-    })
+    await $.ajax({
+        url: queryPoolConfigUrl,
+        type: 'GET',
+        xhrFields: {
+            responseType: 'arraybuffer'
+        },
+        success: function (data) {
+            const decoder = new TextDecoder('gbk');
+            const utf8String = decoder.decode(data);
+            csvData = $.csv.toObjects(utf8String);
+            for (let i = 0; i < csvData.length; i++) {
+                let poolId = csvData[i].pool_id
+                if (poolId === "11") {
+                    poolInfo[poolId] = {
+                        name: "常态共鸣(up)",
+                        type: csvData[i].type
+                    }
+                } else {
+                    poolInfo[poolId] = {
+                        name: csvData[i].name,
+                        type: csvData[i].type
+                    }
+                }
+            }
+            console.log(`卡池配置信息：${JSON.stringify(poolInfo)}`)
+        }
+    });
 
-    await $.get(queryRoleConfigUrl, function (resp) {
-        console.log("----------------------------------------")
-        console.log(resp);
-        roleInfo = JSON.parse(resp);
-    })
+    await $.ajax({
+        url: queryRoleConfigUrl,
+        type: 'GET',
+        xhrFields: {
+            responseType: 'arraybuffer'
+        },
+        success: function (data) {
+            const decoder = new TextDecoder('gbk');
+            const utf8String = decoder.decode(data);
+            csvData = $.csv.toObjects(utf8String);
+            for (let i = 0; i < csvData.length; i++) {
+                let roleId = csvData[i].id
+                roleInfo[roleId] = {
+                    name: csvData[i].name,
+                    rarity: csvData[i].rarity
+                }
+            }
+            console.log(`角色配置信息：${JSON.stringify(roleInfo)}`)
+        }
+    });
 
-    await $.get(queryCardConfigUrl, function (resp) {
-        console.log("----------------------------------------")
-        console.log(resp);
-        cardInfo = JSON.parse(resp);
-    })
+    await $.ajax({
+        url: queryCardConfigUrl,
+        type: 'GET',
+        xhrFields: {
+            responseType: 'arraybuffer'
+        },
+        success: function (data) {
+            const decoder = new TextDecoder('gbk');
+            const utf8String = decoder.decode(data);
+            csvData = $.csv.toObjects(utf8String);
+            for (let i = 0; i < csvData.length; i++) {
+                let cardId = csvData[i].id
+                cardInfo[cardId] = {
+                    name: csvData[i].name,
+                    rarity: csvData[i].rarity
+                }
+            }
+            console.log(`烙痕配置信息：${JSON.stringify(cardInfo)}`)
+        }
+    });
 }
 
 async function queryAllRoleData() {
