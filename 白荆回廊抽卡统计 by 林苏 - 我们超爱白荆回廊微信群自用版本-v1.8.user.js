@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         白荆回廊抽卡统计 by 林苏 - 我们超爱白荆回廊微信群自用版本
 // @namespace    http://tampermonkey.net/
-// @version      v1.7
+// @version      v1.8
 // @description  我们超爱白荆回廊群自用版本，由天墉城海临办事处、流月城海临办事处、光明野海临办事处提供赞助！
 // @author       林苏
 // @match        https://seed.qq.com/act/*
@@ -20,6 +20,7 @@
 //  v1.5 优化不歪率统计公式；增加小保底是否歪了显示；
 //  v1.6 适配烛龙配置文件的改动；
 //  v1.7 适配烛龙不加配置的神经病举动
+//  v1.8 更新了最新的卡池UP配置
 
 let queryPoolConfigUrl = "https://seed.qq.com/act/a20240905record/pc/csv/kachi.csv";
 let queryRoleConfigUrl = "https://seed.qq.com/act/a20240905record/pc/csv/tdz.csv";
@@ -34,7 +35,7 @@ let poolInfo = {};
 let roleInfo = {};
 let cardInfo = {};
 
-let poolUpConfig = '{"12":{"up":"602"},"14":{"up":"618"},"15":{"up":"626"},"17":{"up":"623"},"18":{"up":"622"},"20":{"up":"624"},"21":{"up":"610"},"24":{"up":"603"},"26":{"up":"630"},"28":{"up":"628"},"31":{"up":"631"},"33":{"up":"632"},"35":{"up":"611"},"37":{"up":"634"},"39":{"up":"633"}}';
+let poolUpConfig = '{"12":{"up":"602"},"14":{"up":"618"},"15":{"up":"626"},"17":{"up":"623"},"18":{"up":"622"},"20":{"up":"624"},"21":{"up":"610"},"24":{"up":"603"},"26":{"up":"630"},"28":{"up":"628"},"31":{"up":"631"},"33":{"up":"632"},"35":{"up":"611"},"37":{"up":"634"},"39":{"up":"633"},"41":{"up":"612"},"43":{"up":"642"},"45":{"up":"638"},"47":{"up":"614"},"48":{"up":"645"},"50":{"up":"646"},"52":{"up":"643"},"54":{"up":"647"}}';
 
 let poolUpInfo = JSON.parse(poolUpConfig);
 
@@ -411,13 +412,13 @@ async function queryAllRoleData() {
                               if (nowRole.name.includes(nowPool.up)) {
                                   nowRole.getStatus = '小保底没歪';
                                   rolePools.smallUpTotal++;
-
                               } else {
                                   nowRole.getStatus = '小保底歪了';
                                   rolePools.small = false;
                               }
                           } else {
                               rolePools.small = true;
+                              nowRole.getStatus = '大保底了！';
                           }
                       }
                       nowPool.sixList.push(nowRole);
@@ -639,13 +640,14 @@ async function queryAllCardData() {
                               if (nowCard.name.includes(nowPool.up)) {
                                   nowCard.getStatus = '小保底没歪';
                                   cardPools.smallUpTotal++;
-
+                                  cardPools.small = false;
                               } else {
                                   nowCard.getStatus = '小保底歪了';
                                   cardPools.small = false;
                               }
                           } else {
                               cardPools.small = true;
+                              nowCard.getStatus = '大保底了！';
                           }
                       }
                       nowPool.sixList.push(nowCard);
